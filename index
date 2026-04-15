@@ -24,18 +24,18 @@
 const { useState, useCallback } = React;
 
 const STARTER_STAGES = [
-  { id: "bf", name: "Battlefield", icon: "\u{1F3DF}\uFE0F" },
-  { id: "tc", name: "Town & City", icon: "\u{1F303}" },
-  { id: "sb", name: "Small Battlefield", icon: "\u2694\uFE0F" },
-  { id: "ps2", name: "Pok\u00E9mon Stadium 2", icon: "\u26A1" },
-  { id: "sv", name: "Smashville", icon: "\u{1F3D8}\uFE0F" },
+  { id: "bf", name: "Battlefield", img: "battlefield.png" },
+  { id: "tc", name: "Town & City", img: "town-and-city.png" },
+  { id: "sb", name: "Small Battlefield", img: "small-battlefield.png" },
+  { id: "ps2", name: "Pok\u00E9mon Stadium 2", img: "pokemon-stadium-2.png" },
+  { id: "sv", name: "Smashville", img: "smashville.png" },
 ];
 
 const COUNTERPICK_STAGES = [
   ...STARTER_STAGES,
-  { id: "hc", name: "Hollow Bastion", icon: "\u{1F3F0}" },
-  { id: "fd", name: "Final Destination", icon: "\u{1F30C}" },
-  { id: "ka", name: "Kalos Pok\u00E9mon League", icon: "\u{1F525}" },
+  { id: "hc", name: "Hollow Bastion", img: "hollow-bastion.png" },
+  { id: "fd", name: "Final Destination", img: "final-destination.png" },
+  { id: "ka", name: "Kalos Pok\u00E9mon League", img: "kalos-pokemon-league.png" },
 ];
 
 const getStrikeOrder = (first) => {
@@ -61,8 +61,8 @@ function StageCard({ stage, status, onClick, playerColor }) {
     onClick: isAvailable ? onClick : undefined,
     style: {
       position: "relative", display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center", gap: "6px",
-      padding: "16px 10px", borderRadius: "12px",
+      alignItems: "center", justifyContent: "flex-end", gap: "0px",
+      padding: "0", borderRadius: "12px",
       border: "1.5px solid " + (isSelected ? C.gold : isBanned ? C.bannedBorder : isAvailable ? C.borderActive : C.border),
       background: isSelected ? "linear-gradient(135deg, rgba(255,204,51,0.15), rgba(255,170,0,0.08))" : isBanned ? C.banned : C.surface,
       cursor: isAvailable ? "pointer" : "default",
@@ -90,10 +90,28 @@ function StageCard({ stage, status, onClick, playerColor }) {
       e.currentTarget.style.transform = "translateY(0)";
     } : undefined,
   },
-    isBanned && React.createElement("div", { style: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "36px", color: "rgba(255,60,60,0.5)", fontWeight: 900, pointerEvents: "none", zIndex: 2 } }, "\u2715"),
-    isSelected && React.createElement("div", { style: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px", pointerEvents: "none", zIndex: 2 } }, "\u{1F451}"),
-    React.createElement("span", { style: { fontSize: "28px", filter: isBanned ? "grayscale(1)" : isSelected ? "brightness(1.2)" : "none", transition: "filter 0.2s" } }, stage.icon),
-    React.createElement("span", { style: { fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "center", lineHeight: 1.2, color: isBanned ? C.textDim : isSelected ? C.gold : C.text } }, stage.name)
+    // Stage image
+    React.createElement("img", {
+      src: stage.img,
+      alt: stage.name,
+      style: {
+        width: "100%", height: "auto", aspectRatio: "16/9",
+        objectFit: "cover", display: "block",
+        filter: isBanned ? "grayscale(1) brightness(0.5)" : isSelected ? "brightness(1.1)" : "none",
+        transition: "filter 0.2s",
+      }
+    }),
+    // Banned overlay
+    isBanned && React.createElement("div", { style: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "42px", color: "rgba(255,60,60,0.7)", fontWeight: 900, pointerEvents: "none", zIndex: 2, textShadow: "0 2px 8px rgba(0,0,0,0.8)" } }, "\u2715"),
+    // Selected overlay
+    isSelected && React.createElement("div", { style: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "32px", pointerEvents: "none", zIndex: 2, background: "rgba(255,204,51,0.1)" } }, "\u{1F451}"),
+    // Name label
+    React.createElement("div", { style: {
+      width: "100%", padding: "6px 6px", textAlign: "center",
+      background: isSelected ? "rgba(255,204,51,0.1)" : C.surface,
+    }},
+      React.createElement("span", { style: { fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", lineHeight: 1.2, color: isBanned ? C.textDim : isSelected ? C.gold : C.text } }, stage.name)
+    )
   );
 }
 
@@ -320,8 +338,8 @@ function App() {
 
     // STAGE GRID
     (isGame1 || cpPhase !== "chars") && React.createElement("div", { style: {
-      display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-      gap: "10px", maxWidth: "680px", margin: "0 auto", width: "100%", flex: 1,
+      display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+      gap: "10px", maxWidth: "720px", margin: "0 auto", width: "100%", flex: 1,
     }},
       stages.map(stage => {
         const isBanned = activeBans.includes(stage.id);
@@ -339,10 +357,10 @@ function App() {
     isComplete && React.createElement("div", { style: { textAlign: "center", marginTop: "32px", animation: "fadeIn 0.4s ease" } },
       React.createElement("div", { style: {
         display: "inline-flex", flexDirection: "column", alignItems: "center",
-        padding: "20px 40px", borderRadius: "16px", border: "2px solid " + C.gold,
-        background: "rgba(255,204,51,0.05)", animation: "glow 2s infinite",
+        padding: "16px 32px 20px", borderRadius: "16px", border: "2px solid " + C.gold,
+        background: "rgba(255,204,51,0.05)", animation: "glow 2s infinite", maxWidth: "280px",
       }},
-        React.createElement("span", { style: { fontSize: "36px", marginBottom: "6px" } }, stages.find(s => s.id === selectedStage)?.icon),
+        React.createElement("img", { src: stages.find(s => s.id === selectedStage)?.img, alt: "", style: { width: "100%", borderRadius: "8px", marginBottom: "10px" } }),
         React.createElement("span", { style: { fontFamily: "'Orbitron', sans-serif", fontSize: "18px", fontWeight: 700, color: C.gold, letterSpacing: "1px" } }, stages.find(s => s.id === selectedStage)?.name),
         React.createElement("span", { style: { fontSize: "12px", color: C.textDim, marginTop: "4px", letterSpacing: "1px", textTransform: "uppercase" } },
           isGame1 ? "Play here!" : "Chosen by Player " + (winner === 1 ? 2 : 1))
@@ -350,7 +368,7 @@ function App() {
     ),
 
     // LOG
-    history.length > 0 && React.createElement("div", { style: { maxWidth: "680px", margin: "24px auto 0", width: "100%" } },
+    history.length > 0 && React.createElement("div", { style: { maxWidth: "720px", margin: "24px auto 0", width: "100%" } },
       React.createElement("div", { style: { fontSize: "11px", color: C.textDim, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px", fontFamily: "'Orbitron', sans-serif" } }, "LOG"),
       React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
         history.map((entry, i) => {
