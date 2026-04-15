@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Stage Strike — Smash Ultimate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { background: #0a0a0f; overflow-x: hidden; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes glow { 0%, 100% { box-shadow: 0 0 20px rgba(255,204,51,0.2); } 50% { box-shadow: 0 0 30px rgba(255,204,51,0.4); } }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useCallback } = React;
+
+const STARTER_STAGES = [
+  { id: "bf", name: "Battlefield", icon: "\u{1F3DF}\uFE0F" },
+  { id: "tc", name: "Town & City", icon: "\u{1F303}" },
+  { id: "sb", name: "Small Battlefield", icon: "\u2694\uFE0F" },
+  { id: "ps2", name: "Pok\u00E9mon Stadium 2", icon: "\u26A1" },
+  { id: "sv", name: "Smashville", icon: "\u{1F3D8}\uFE0F" },
+];
+
+const COUNTERPICK_STAGES = [
+  ...STARTER_STAGES,
+  { id: "hc", name: "Hollow Bastion", icon: "\u{1F3F0}" },
+  { id: "fd", name: "Final Destination", icon: "\u{1F30C}" },
+  { id: "ka", name: "Kalos Pok\u00E9mon League", icon: "\u{1F525}" },
+];
+
+const getStrikeOrder = (first) => {
+  const second = first === 1 ? 2 : 1;
+  return [first, second, second, first];
+};
+
+const C = {
+  bg: "#0a0a0f", surface: "#12121a", surfaceHover: "#1a1a28",
+  border: "#2a2a3a", borderActive: "#4a4a6a",
+  p1: "#ff3366", p1Glow: "rgba(255,51,102,0.3)", p1Soft: "rgba(255,51,102,0.1)",
+  p2: "#33aaff", p2Glow: "rgba(51,170,255,0.3)", p2Soft: "rgba(51,170,255,0.1)",
+  text: "#e8e8f0", textDim: "#8888aa",
+  gold: "#ffcc33", goldGlow: "rgba(255,204,51,0.4)",
+  banned: "rgba(255,50,50,0.15)", bannedBorder: "rgba(255,50,50,0.3)",
+};
+
+function StageCard({ stage, status, onClick, playerColor }) {
+  const isBanned = status === "banned";
+  const isSelected = status === "selected";
+  const isAvailable = status === "available";
+  return React.createElement("button", {
+    onClick: isAvailable ? onClick : undefined,
+    style: {
+      position: "relative", display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center", gap: "6px",
+      padding: "16px 10px", borderRadius: "12px",
+      border: "1.5px solid " + (isSelected ? C.gold : isBanned ? C.bannedBorder : isAvailable ? C.borderActive : C.border),
+      background: isSelected ? "linear-gradient(135deg, rgba(255,204,51,0.15), rgba(255,170,0,0.08))" : isBanned ? C.banned : C.surface,
+      cursor: isAvailable ? "pointer" : "default",
+      opacity: isBanned ? 0.35 : 1, transition: "all 0.2s ease",
+      fontFamily: "'Rajdhani', sans-serif", color: C.text, outline: "none",
+      overflow: "hidden", minWidth: 0, animation: "fadeIn 0.3s ease",
+      boxShadow: isSelected ? "0 0 20px " + C.goldGlow + ", inset 0 0 20px rgba(255,204,51,0.05)" : isAvailable ? "0 2px 8px rgba(0,0,0,0.3)" : "none",
+    },
+    onTouchStart: isAvailable ? (e) => {
+      e.currentTarget.style.border = "1.5px solid " + (playerColor || C.borderActive);
+      e.currentTarget.style.background = C.surfaceHover;
+    } : undefined,
+    onTouchEnd: isAvailable ? (e) => {
+      e.currentTarget.style.border = "1.5px solid " + C.borderActive;
+      e.currentTarget.style.background = C.surface;
+    } : undefined,
+    onMouseEnter: isAvailable ? (e) => {
+      e.currentTarget.style.border = "1.5px solid " + (playerColor || C.borderActive);
+      e.currentTarget.style.background = C.surfaceHover;
+      e.currentTarget.style.transform = "translateY(-2px)";
+    } : undefined,
+    onMouseLeave: isAvailable ? (e) => {
+      e.currentTarget.style.border = "1.5px solid " + C.borderActive;
+      e.currentTarget.style.background = C.surface;
+      e.currentTarget.style.transform = "translateY(0)";
+    } : undefined,
+  },
+    isBanned && React.createElement("div", { style: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "36px", color: "rgba(255,60,60,0.5)", fontWeight: 900, pointerEvents: "none", zIndex: 2 } }, "\u2715"),
+    isSelected && React.createElement("div", { style: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px", pointerEvents: "none", zIndex: 2 } }, "\u{1F451}"),
+    React.createElement("span", { style: { fontSize: "28px", filter: isBanned ? "grayscale(1)" : isSelected ? "brightness(1.2)" : "none", transition: "filter 0.2s" } }, stage.icon),
+    React.createElement("span", { style: { fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "center", lineHeight: 1.2, color: isBanned ? C.textDim : isSelected ? C.gold : C.text } }, stage.name)
+  );
+}
+
+function PlayerBadge({ player, active, color }) {
+  return React.createElement("div", { style: {
+    display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "8px",
+    background: active ? (player === 1 ? C.p1Soft : C.p2Soft) : "transparent",
+    border: "1.5px solid " + (active ? color : "transparent"),
+    boxShadow: active ? "0 0 12px " + (player === 1 ? C.p1Glow : C.p2Glow) : "none",
+    transition: "all 0.3s ease",
+  }},
+    React.createElement("div", { style: { width: "10px", height: "10px", borderRadius: "50%", background: color, boxShadow: active ? "0 0 8px " + color : "none", animation: active ? "pulse 1.5s infinite" : "none" } }),
+    React.createElement("span", { style: { fontFamily: "'Orbitron', sans-serif", fontSize: "13px", fontWeight: 700, color: active ? color : C.textDim, letterSpacing: "1px" } }, "P" + player)
+  );
+}
+
+function Btn({ onClick, children, style }) {
+  return React.createElement("button", { onClick, style: {
+    padding: "6px 14px", borderRadius: "6px", border: "1px solid " + C.border,
+    background: "transparent", color: C.textDim, fontFamily: "'Rajdhani', sans-serif",
+    fontSize: "12px", fontWeight: 600, cursor: "pointer", outline: "none", ...style,
+  }}, children);
+}
+
+function PlayerPickBtn({ p, onClick }) {
+  const color = p === 1 ? C.p1 : C.p2;
+  const bg = p === 1 ? C.p1Soft : C.p2Soft;
+  const glow = p === 1 ? C.p1Glow : C.p2Glow;
+  return React.createElement("button", {
+    onClick,
+    style: {
+      padding: "24px 40px", borderRadius: "12px", border: "2px solid " + color,
+      background: bg, color: color, fontFamily: "'Orbitron', sans-serif",
+      fontSize: "18px", fontWeight: 700, letterSpacing: "2px", cursor: "pointer",
+      transition: "all 0.2s ease", outline: "none",
+    },
+    onMouseEnter: (e) => { e.currentTarget.style.boxShadow = "0 0 24px " + glow; e.currentTarget.style.transform = "translateY(-3px)"; },
+    onMouseLeave: (e) => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateY(0)"; },
+  }, "PLAYER " + p);
+}
+
+function App() {
+  const [mode, setMode] = useState(null);
+  const [banned, setBanned] = useState([]);
+  const [strikeIndex, setStrikeIndex] = useState(0);
+  const [selectedStage, setSelectedStage] = useState(null);
+  const [winner, setWinner] = useState(null);
+  const [rpsWinner, setRpsWinner] = useState(null);
+  const [cpBans, setCpBans] = useState([]);
+  const [cpPhase, setCpPhase] = useState("chars");
+  const [history, setHistory] = useState([]);
+  const numBans = 3;
+
+  const strikeOrder = rpsWinner ? getStrikeOrder(rpsWinner) : [1, 2, 2, 1];
+  const currentPlayer = mode === "game1" ? strikeOrder[strikeIndex] : null;
+  const stagesForMode = mode === "counterpick" ? COUNTERPICK_STAGES : STARTER_STAGES;
+
+  const reset = () => { setMode(null); setBanned([]); setStrikeIndex(0); setSelectedStage(null); setWinner(null); setRpsWinner(null); setCpBans([]); setCpPhase("chars"); setHistory([]); };
+  const resetCurrent = () => { setBanned([]); setStrikeIndex(0); setSelectedStage(null); setCpBans([]); setCpPhase("chars"); setHistory([]); };
+
+  const handleGame1Strike = useCallback((stageId) => {
+    if (selectedStage || strikeIndex >= strikeOrder.length) return;
+    const newBanned = [...banned, stageId];
+    const newHistory = [...history, { action: "ban", stage: stageId, player: strikeOrder[strikeIndex] }];
+    setBanned(newBanned); setHistory(newHistory);
+    const remaining = STARTER_STAGES.filter(s => !newBanned.includes(s.id));
+    if (remaining.length === 1) setSelectedStage(remaining[0].id);
+    else setStrikeIndex(strikeIndex + 1);
+  }, [banned, strikeIndex, selectedStage, history, strikeOrder]);
+
+  const handleCpBan = useCallback((stageId) => {
+    if (cpPhase !== "ban") return;
+    const newBans = [...cpBans, stageId];
+    setCpBans(newBans); setHistory([...history, { action: "ban", stage: stageId, player: winner }]);
+    if (newBans.length >= numBans) setCpPhase("pick");
+  }, [cpBans, cpPhase, numBans, winner, history]);
+
+  const handleCpPick = useCallback((stageId) => {
+    if (cpPhase !== "pick") return;
+    setSelectedStage(stageId); setHistory([...history, { action: "pick", stage: stageId, player: winner === 1 ? 2 : 1 }]);
+  }, [cpPhase, winner, history]);
+
+  const undoLast = () => {
+    if (history.length === 0) return;
+    const last = history[history.length - 1];
+    const newHistory = history.slice(0, -1);
+    setHistory(newHistory);
+    if (mode === "game1") {
+      if (selectedStage) setSelectedStage(null);
+      setBanned(banned.filter(id => id !== last.stage));
+      if (!selectedStage) setStrikeIndex(Math.max(0, strikeIndex - 1));
+    } else if (mode === "counterpick") {
+      if (selectedStage) { setSelectedStage(null); setCpPhase("pick"); }
+      else if (last.action === "ban") { setCpBans(cpBans.filter(id => id !== last.stage)); setCpPhase("ban"); }
+    }
+  };
+
+  const wrap = (bg, ...children) => React.createElement("div", { style: {
+    minHeight: "100vh", background: bg || "radial-gradient(ellipse at 50% 0%, #1a1a2e 0%, #0a0a0f 70%)",
+    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+    fontFamily: "'Rajdhani', sans-serif", color: C.text, padding: "20px", gap: "32px",
+  }}, ...children);
+
+  // MENU
+  if (!mode) {
+    return wrap(null,
+      React.createElement("div", { style: { animation: "slideUp 0.5s ease", textAlign: "center" } },
+        React.createElement("div", { style: { fontFamily: "'Orbitron', sans-serif", fontSize: "14px", fontWeight: 400, letterSpacing: "6px", color: C.textDim, marginBottom: "8px", textTransform: "uppercase" } }, "SUPER SMASH BROS"),
+        React.createElement("h1", { style: { fontFamily: "'Orbitron', sans-serif", fontSize: "clamp(28px, 5vw, 42px)", fontWeight: 900, margin: "0 0 6px 0", background: "linear-gradient(135deg, " + C.gold + ", #ff9900, " + C.gold + ")", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "3px" } }, "STAGE STRIKE"),
+        React.createElement("div", { style: { fontSize: "13px", color: C.textDim, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "48px" } }, "ULTIMATE \u00B7 STANDARD RULESET"),
+        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "14px", width: "280px", margin: "0 auto" } },
+          [{ key: "rps", label: "GAME 1", sub: "Starter Stage Strike", color: C.gold },
+           { key: "pickWinner", label: "GAME 2+", sub: "Counterpick", color: C.p2 }].map(opt =>
+            React.createElement("button", { key: opt.key, onClick: () => setMode(opt.key), style: {
+              padding: "18px 24px", borderRadius: "12px", border: "1.5px solid " + C.border,
+              background: C.surface, color: C.text, cursor: "pointer", fontFamily: "'Rajdhani', sans-serif",
+              textAlign: "left", transition: "all 0.2s ease", outline: "none",
+            },
+            onMouseEnter: (e) => { e.currentTarget.style.borderColor = opt.color; e.currentTarget.style.transform = "translateY(-2px)"; },
+            onMouseLeave: (e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.transform = "translateY(0)"; },
+            },
+              React.createElement("div", { style: { fontFamily: "'Orbitron', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "2px", color: opt.color } }, opt.label),
+              React.createElement("div", { style: { fontSize: "13px", color: C.textDim, marginTop: "2px" } }, opt.sub)
+            )
+          )
+        )
+      )
+    );
+  }
+
+  // RPS SCREEN
+  if (mode === "rps") {
+    return wrap(null,
+      React.createElement("div", { style: { textAlign: "center", animation: "fadeIn 0.3s ease" } },
+        React.createElement("div", { style: { fontSize: "36px", marginBottom: "12px" } }, "\u270A\u270B\u270C\uFE0F"),
+        React.createElement("h2", { style: { fontFamily: "'Orbitron', sans-serif", fontSize: "20px", fontWeight: 700, margin: "0 0 8px 0", letterSpacing: "2px" } }, "WHO WON RPS?"),
+        React.createElement("p", { style: { color: C.textDim, fontSize: "14px", margin: 0 } }, "Winner strikes first")
+      ),
+      React.createElement("div", { style: { display: "flex", gap: "16px" } },
+        React.createElement(PlayerPickBtn, { p: 1, onClick: () => { setRpsWinner(1); setMode("game1"); } }),
+        React.createElement(PlayerPickBtn, { p: 2, onClick: () => { setRpsWinner(2); setMode("game1"); } })
+      ),
+      React.createElement(Btn, { onClick: reset, style: { padding: "8px 20px", fontSize: "13px" } }, "\u2190 Back")
+    );
+  }
+
+  // PICK WINNER SCREEN
+  if (mode === "pickWinner") {
+    return wrap(null,
+      React.createElement("div", { style: { textAlign: "center", animation: "fadeIn 0.3s ease" } },
+        React.createElement("h2", { style: { fontFamily: "'Orbitron', sans-serif", fontSize: "20px", fontWeight: 700, margin: "0 0 8px 0", letterSpacing: "2px" } }, "WHO WON?"),
+        React.createElement("p", { style: { color: C.textDim, fontSize: "14px", margin: 0 } }, "The winner bans stages, loser picks")
+      ),
+      React.createElement("div", { style: { display: "flex", gap: "16px" } },
+        React.createElement(PlayerPickBtn, { p: 1, onClick: () => { setWinner(1); setMode("counterpick"); } }),
+        React.createElement(PlayerPickBtn, { p: 2, onClick: () => { setWinner(2); setMode("counterpick"); } })
+      ),
+      React.createElement(Btn, { onClick: reset, style: { padding: "8px 20px", fontSize: "13px" } }, "\u2190 Back")
+    );
+  }
+
+  // MAIN STRIKING / COUNTERPICK UI
+  const isGame1 = mode === "game1";
+  const stages = stagesForMode;
+  const activeBans = isGame1 ? banned : cpBans;
+  const isComplete = selectedStage !== null;
+
+  let statusText = "";
+  if (isGame1) {
+    if (isComplete) statusText = "Stage selected!";
+    else { const rem = STARTER_STAGES.length - 1 - banned.length; statusText = "Player " + currentPlayer + " \u2014 ban a stage (" + rem + " left to ban)"; }
+  } else {
+    if (isComplete) statusText = "Stage selected!";
+    else if (cpPhase === "chars") statusText = "Both players: pick your characters first!";
+    else if (cpPhase === "ban") statusText = "Player " + winner + " bans (" + (numBans - cpBans.length) + " remaining)";
+    else statusText = "Player " + (winner === 1 ? 2 : 1) + " \u2014 pick your stage";
+  }
+
+  const activePlayer = isGame1 ? currentPlayer : (cpPhase === "chars" ? null : cpPhase === "ban" ? winner : (winner === 1 ? 2 : 1));
+  const activeColor = activePlayer === 1 ? C.p1 : activePlayer === 2 ? C.p2 : C.gold;
+
+  return React.createElement("div", { style: {
+    minHeight: "100vh", background: "radial-gradient(ellipse at 50% 0%, #1a1a2e 0%, #0a0a0f 70%)",
+    display: "flex", flexDirection: "column", fontFamily: "'Rajdhani', sans-serif", color: C.text, padding: "20px",
+  }},
+
+    // HEADER
+    React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", gap: "12px" } },
+      React.createElement(PlayerBadge, { player: 1, active: activePlayer === 1 && !isComplete, color: C.p1 }),
+      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "12px" } },
+        React.createElement("div", { style: { fontFamily: "'Orbitron', sans-serif", fontSize: "11px", color: C.textDim, letterSpacing: "2px" } }, isGame1 ? "GAME 1" : "COUNTERPICK"),
+        React.createElement("div", { style: { display: "flex", gap: "8px" } },
+          history.length > 0 && !isComplete && React.createElement(Btn, { onClick: undoLast }, "\u21A9 UNDO"),
+          React.createElement(Btn, { onClick: resetCurrent }, "\u21BB RESET"),
+          React.createElement(Btn, { onClick: reset }, "\u2190 MENU"),
+        ),
+      ),
+      React.createElement(PlayerBadge, { player: 2, active: activePlayer === 2 && !isComplete, color: C.p2 }),
+    ),
+
+    // STATUS
+    React.createElement("div", { style: { textAlign: "center", marginBottom: "24px", animation: "fadeIn 0.3s ease" } },
+      React.createElement("div", { style: { fontFamily: "'Orbitron', sans-serif", fontSize: "14px", fontWeight: 600, color: isComplete ? C.gold : activeColor, letterSpacing: "1.5px", textTransform: "uppercase" } }, statusText)
+    ),
+
+    // CHARACTER CONFIRMATION
+    !isGame1 && cpPhase === "chars" && React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, gap: "24px", animation: "fadeIn 0.3s ease" } },
+      React.createElement("div", { style: { padding: "24px 32px", borderRadius: "16px", border: "1.5px solid " + C.border, background: C.surface, textAlign: "center", maxWidth: "360px" } },
+        React.createElement("div", { style: { fontSize: "32px", marginBottom: "12px" } }, "\u{1F3AE}"),
+        React.createElement("div", { style: { fontFamily: "'Orbitron', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "1.5px", color: C.text, marginBottom: "8px" } }, "CHARACTER SELECT"),
+        React.createElement("div", { style: { fontSize: "14px", color: C.textDim, lineHeight: 1.6, marginBottom: "6px" } },
+          React.createElement("span", { style: { color: winner === 1 ? C.p1 : C.p2, fontWeight: 700 } }, "Player " + winner), " (winner) picks character first"
+        ),
+        React.createElement("div", { style: { fontSize: "14px", color: C.textDim, lineHeight: 1.6, marginBottom: "20px" } },
+          "Then ", React.createElement("span", { style: { color: winner === 1 ? C.p2 : C.p1, fontWeight: 700 } }, "Player " + (winner === 1 ? 2 : 1)), " (loser) picks character"
+        ),
+        React.createElement("button", { onClick: () => setCpPhase("ban"), style: {
+          padding: "12px 32px", borderRadius: "8px", border: "1.5px solid " + C.gold,
+          background: "rgba(255,204,51,0.1)", color: C.gold, fontFamily: "'Orbitron', sans-serif",
+          fontSize: "14px", fontWeight: 700, letterSpacing: "1px", cursor: "pointer", transition: "all 0.2s ease", outline: "none",
+        }}, "CHARACTERS LOCKED IN")
+      )
+    ),
+
+    // STAGE GRID
+    (isGame1 || cpPhase !== "chars") && React.createElement("div", { style: {
+      display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+      gap: "10px", maxWidth: "680px", margin: "0 auto", width: "100%", flex: 1,
+    }},
+      stages.map(stage => {
+        const isBanned = activeBans.includes(stage.id);
+        const isSelected = selectedStage === stage.id;
+        const isAvailable = !isBanned && !isSelected && !isComplete;
+        return React.createElement(StageCard, {
+          key: stage.id, stage, playerColor: activeColor,
+          status: isSelected ? "selected" : isBanned ? "banned" : isAvailable ? "available" : "disabled",
+          onClick: () => { if (isGame1) handleGame1Strike(stage.id); else if (cpPhase === "ban") handleCpBan(stage.id); else handleCpPick(stage.id); },
+        });
+      })
+    ),
+
+    // RESULT
+    isComplete && React.createElement("div", { style: { textAlign: "center", marginTop: "32px", animation: "fadeIn 0.4s ease" } },
+      React.createElement("div", { style: {
+        display: "inline-flex", flexDirection: "column", alignItems: "center",
+        padding: "20px 40px", borderRadius: "16px", border: "2px solid " + C.gold,
+        background: "rgba(255,204,51,0.05)", animation: "glow 2s infinite",
+      }},
+        React.createElement("span", { style: { fontSize: "36px", marginBottom: "6px" } }, stages.find(s => s.id === selectedStage)?.icon),
+        React.createElement("span", { style: { fontFamily: "'Orbitron', sans-serif", fontSize: "18px", fontWeight: 700, color: C.gold, letterSpacing: "1px" } }, stages.find(s => s.id === selectedStage)?.name),
+        React.createElement("span", { style: { fontSize: "12px", color: C.textDim, marginTop: "4px", letterSpacing: "1px", textTransform: "uppercase" } },
+          isGame1 ? "Play here!" : "Chosen by Player " + (winner === 1 ? 2 : 1))
+      )
+    ),
+
+    // LOG
+    history.length > 0 && React.createElement("div", { style: { maxWidth: "680px", margin: "24px auto 0", width: "100%" } },
+      React.createElement("div", { style: { fontSize: "11px", color: C.textDim, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px", fontFamily: "'Orbitron', sans-serif" } }, "LOG"),
+      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
+        history.map((entry, i) => {
+          const stage = stages.find(s => s.id === entry.stage) || STARTER_STAGES.find(s => s.id === entry.stage);
+          const color = entry.player === 1 ? C.p1 : C.p2;
+          return React.createElement("div", { key: i, style: {
+            fontSize: "11px", padding: "3px 10px", borderRadius: "4px",
+            background: entry.action === "pick" ? "rgba(255,204,51,0.1)" : color + "15",
+            border: "1px solid " + (entry.action === "pick" ? C.gold + "40" : color + "30"),
+            color: entry.action === "pick" ? C.gold : color, fontWeight: 600,
+          }}, "P" + entry.player + " " + (entry.action === "ban" ? "\u2715" : "\u2605") + " " + (stage?.name || ""));
+        })
+      )
+    ),
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+</script>
+</body>
+</html>
