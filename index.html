@@ -311,8 +311,8 @@ function App() {
     return wrap(
       React.createElement("div", { style: { textAlign: "center", animation: "fadeIn 0.3s ease" } },
         React.createElement("div", { style: { fontSize: "36px", marginBottom: "12px" } }, "\u270A\u270B\u270C\uFE0F"),
-        React.createElement("h2", { style: { fontFamily: "'Orbitron', sans-serif", fontSize: "20px", fontWeight: 700, margin: "0 0 8px 0", letterSpacing: "2px" } }, "WHO WON RPS?"),
-        React.createElement("p", { style: { color: C.textDim, fontSize: "14px", margin: 0 } }, "Winner strikes first")
+        React.createElement("h2", { style: { fontFamily: "'Orbitron', sans-serif", fontSize: "20px", fontWeight: 700, margin: "0 0 8px 0", letterSpacing: "2px" } }, "WHO WON ROCK, PAPER, SCISSORS?"),
+        React.createElement("p", { style: { color: C.textDim, fontSize: "14px", margin: 0 } }, "Play rock, paper scissors. The player who wins will begin stage striking.")
       ),
       React.createElement("div", { style: { display: "flex", gap: "16px" } },
         React.createElement(NamePickBtn, { name: p1Name, p: 1, onClick: () => { setRpsWinner(1); setMode("game1"); } }),
