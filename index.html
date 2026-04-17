@@ -138,6 +138,7 @@ function App() {
   const [cpPhase, setCpPhase] = useState("ban");
   const [history, setHistory] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [turnConfirmed, setTurnConfirmed] = useState(false);
   const numBans = 3;
   const p1Ref = useRef(null);
 
@@ -148,9 +149,9 @@ function App() {
   const currentPlayer = mode === "game1" ? strikeOrder[strikeIndex] : null;
   const stagesForMode = mode === "counterpick" ? COUNTERPICK_STAGES : STARTER_STAGES;
 
-  const fullReset = () => { setShowConfirm(false); setP1Name(""); setP2Name(""); setNamesSet(false); setMode(null); setBanned([]); setStrikeIndex(0); setSelectedStage(null); setWinner(null); setRpsWinner(null); setCpBans([]); setCpPhase("ban"); setHistory([]); };
-  const toMenu = () => { setShowConfirm(false); setMode(null); setBanned([]); setStrikeIndex(0); setSelectedStage(null); setWinner(null); setRpsWinner(null); setCpBans([]); setCpPhase("ban"); setHistory([]); };
-  const resetCurrent = () => { setBanned([]); setStrikeIndex(0); setSelectedStage(null); setCpBans([]); setCpPhase("ban"); setHistory([]); };
+  const fullReset = () => { setShowConfirm(false); setTurnConfirmed(false); setP1Name(""); setP2Name(""); setNamesSet(false); setMode(null); setBanned([]); setStrikeIndex(0); setSelectedStage(null); setWinner(null); setRpsWinner(null); setCpBans([]); setCpPhase("ban"); setHistory([]); };
+  const toMenu = () => { setShowConfirm(false); setTurnConfirmed(false); setMode(null); setBanned([]); setStrikeIndex(0); setSelectedStage(null); setWinner(null); setRpsWinner(null); setCpBans([]); setCpPhase("ban"); setHistory([]); };
+  const resetCurrent = () => { setTurnConfirmed(false); setBanned([]); setStrikeIndex(0); setSelectedStage(null); setCpBans([]); setCpPhase("ban"); setHistory([]); };
 
   const confirmModal = showConfirm ? React.createElement("div", { style: {
     position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 100,
@@ -192,14 +193,20 @@ function App() {
     setBanned(newBanned); setHistory(newHistory);
     const remaining = STARTER_STAGES.filter(s => !newBanned.includes(s.id));
     if (remaining.length === 1) setSelectedStage(remaining[0].id);
-    else setStrikeIndex(strikeIndex + 1);
+    else {
+      const nextIdx = strikeIndex + 1;
+      if (nextIdx < strikeOrder.length && strikeOrder[nextIdx] !== strikeOrder[strikeIndex]) {
+        setTurnConfirmed(false);
+      }
+      setStrikeIndex(nextIdx);
+    }
   }, [banned, strikeIndex, selectedStage, history, strikeOrder]);
 
   const handleCpBan = useCallback((stageId) => {
     if (cpPhase !== "ban") return;
     const newBans = [...cpBans, stageId];
     setCpBans(newBans); setHistory([...history, { action: "ban", stage: stageId, player: winner }]);
-    if (newBans.length >= numBans) setCpPhase("pick");
+    if (newBans.length >= numBans) { setCpPhase("pick"); setTurnConfirmed(false); }
   }, [cpBans, cpPhase, numBans, winner, history]);
 
   const handleCpPick = useCallback((stageId) => {
@@ -336,6 +343,30 @@ function App() {
   const activeBans = isGame1 ? banned : cpBans;
   const isComplete = selectedStage !== null;
 
+  // Calculate how many strikes the current player has in this turn group
+  let turnCount = 0;
+  let turnPlayer = null;
+  let turnAction = "strike";
+  if (isGame1 && !isComplete) {
+    turnPlayer = strikeOrder[strikeIndex];
+    let count = 0;
+    for (let i = strikeIndex; i < strikeOrder.length && strikeOrder[i] === turnPlayer; i++) count++;
+    turnCount = count;
+    turnAction = "strike";
+  } else if (!isGame1 && !isComplete) {
+    if (cpPhase === "ban") {
+      turnPlayer = winner;
+      turnCount = numBans - cpBans.length;
+      turnAction = "ban";
+    } else if (cpPhase === "pick") {
+      turnPlayer = winner === 1 ? 2 : 1;
+      turnCount = 1;
+      turnAction = "pick";
+    }
+  }
+
+  const needsConfirm = !isComplete && !turnConfirmed && turnPlayer !== null;
+
   let statusText = "";
   if (isGame1) {
     if (isComplete) statusText = "Stage selected!";
@@ -348,6 +379,47 @@ function App() {
 
   const activePlayer = isGame1 ? currentPlayer : (cpPhase === "ban" ? winner : (winner === 1 ? 2 : 1));
   const activeColor = activePlayer === 1 ? C.p1 : C.p2;
+
+  // Turn confirmation page
+  if (needsConfirm) {
+    const playerColor = turnPlayer === 1 ? C.p1 : C.p2;
+    const playerSoft = turnPlayer === 1 ? C.p1Soft : C.p2Soft;
+    const stageWord = turnCount === 1 ? "stage" : "stages";
+    const actionWord = turnAction === "pick" ? "pick" : "strike";
+    const message = turnAction === "pick"
+      ? nm(turnPlayer) + ", pick 1 stage."
+      : nm(turnPlayer) + ", " + actionWord + " " + turnCount + " " + stageWord + ".";
+
+    return wrap(
+      React.createElement("div", { style: { textAlign: "center", animation: "fadeIn 0.3s ease", maxWidth: "360px" } },
+        React.createElement("div", { style: { fontFamily: "'Orbitron', sans-serif", fontSize: "11px", color: C.textDim, letterSpacing: "2px", marginBottom: "16px" } }, isGame1 ? "GAME 1" : "COUNTERPICK"),
+        React.createElement("div", { style: {
+          padding: "28px 32px", borderRadius: "16px",
+          border: "1.5px solid " + playerColor,
+          background: playerSoft, textAlign: "center",
+        }},
+          React.createElement("div", { style: { fontFamily: "'Orbitron', sans-serif", fontSize: "20px", fontWeight: 700, color: playerColor, letterSpacing: "1px", marginBottom: "8px" } }, nm(turnPlayer)),
+          React.createElement("div", { style: { fontSize: "16px", color: C.text, lineHeight: 1.6, marginBottom: "24px" } },
+            turnAction === "pick" ? "Pick 1 stage." : (actionWord.charAt(0).toUpperCase() + actionWord.slice(1) + " " + turnCount + " " + stageWord + ".")
+          ),
+          React.createElement("button", { onClick: () => setTurnConfirmed(true), style: {
+            padding: "14px 40px", borderRadius: "8px", border: "1.5px solid " + playerColor,
+            background: playerColor, color: "#fff", fontFamily: "'Orbitron', sans-serif",
+            fontSize: "15px", fontWeight: 700, letterSpacing: "1px", cursor: "pointer",
+            transition: "all 0.2s ease", outline: "none",
+          },
+          onMouseEnter: (e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 16px " + (turnPlayer === 1 ? C.p1Glow : C.p2Glow); },
+          onMouseLeave: (e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; },
+          }, "OK")
+        )
+      ),
+      React.createElement("div", { style: { display: "flex", gap: "8px" } },
+        React.createElement(Btn, { onClick: () => setShowConfirm(true), style: { padding: "8px 16px", fontSize: "13px" } }, "\u21BB RESET"),
+        React.createElement(Btn, { onClick: toMenu, style: { padding: "8px 16px", fontSize: "13px" } }, "\u2190 MENU"),
+      ),
+      confirmModal
+    );
+  }
 
   return React.createElement("div", { style: {
     minHeight: "100vh", background: "radial-gradient(ellipse at 50% 0%, #1a1a2e 0%, #0a0a0f 70%)",
